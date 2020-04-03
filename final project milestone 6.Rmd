@@ -1,0 +1,86 @@
+---
+title: "final project milestone 5"
+author: "James Bikales"
+date: "3/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidycensus)
+library(sf)
+library(ggplot2)
+library(httr)
+library(mapproj)
+library(tmap)
+
+census_api_key("7501b863e3d3c96200d101891c3df2191d2a98d0")
+```
+
+```{r ev station data, echo = F}
+
+ev_data_raw <- GET("https://developer.nrel.gov/api/alt-fuel-stations/v1.csv?api_key=cL01al61HtSmjbeVd83mIteBv5EXivGyen42Dj59&fuel_type=ELEC")
+ev_data <- content(ev_data_raw)
+```
+
+```{r test w oregon, echo = F}
+ev_ore <- ev_data %>% 
+  filter(State == "OR") %>% 
+  select("Station Name", "Latitude", "Longitude")
+```
+
+```{r converting ev station data to sf, echo = F}
+
+# the coords are the corresponding column names. crs is from the census dataset.
+
+ev_ore_sf <- as.data.frame(ev_ore) %>% st_as_sf(coords = c("Longitude","Latitude"), crs = 4269, remove = FALSE)
+
+```
+
+```{r, echo = F}
+# coords_ore <- do.call(rbind, st_geometry(ev_ore_sf)) %>% 
+ # as_tibble() %>% setNames(c("long","lat"))
+```
+
+
+```{r gathering census data, echo = F}
+rural_prop <- get_decennial(geography = "county",
+                       variables = c("P001001", "P002005"),
+                       state = "OR",
+                       year = 2010,
+                       output = "wide",
+                       geometry = TRUE) %>%
+  rename(county = NAME) %>%
+  mutate(prop_rural = P002005/P001001,
+         county = reorder(county, prop_rural))
+```
+
+```{r combining, echo = F}
+combined <- st_join(rural_prop, left = TRUE, ev_ore_sf) %>% 
+  group_by(county) 
+
+```
+```{r, echo = F}
+combined %>% 
+  ggplot(aes(fill = prop_rural)) +
+  geom_sf() +
+  geom_point(aes(Longitude, Latitude), size = 1, color = "green") +
+  labs(title = "EV charging stations in Oregon", subtitle = "Counties by Percentage of Rural Residents", fill = "Percentage Rural", caption = "US Census Data and National Renewable Energy Laboratory database"
+  )
+  
+```
+
+
+
+
+
+
+```{r}
+# map1 <- tm_shape(rural_prop$geometry) +
+  #tm_polygons() +
+  #tm_shape(ev_ore_sf$geometry) +
+ # tm_bubbles()
+
+# tmap_arrange(map1, map2, nrow = 1)
+```
