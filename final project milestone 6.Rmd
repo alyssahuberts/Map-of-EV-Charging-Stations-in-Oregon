@@ -5,32 +5,30 @@ date: "3/20/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo = F, message=FALSE, warning = F}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(tidycensus)
 library(sf)
 library(ggplot2)
 library(httr)
-library(mapproj)
-library(tmap)
 
 census_api_key("7501b863e3d3c96200d101891c3df2191d2a98d0")
 ```
 
-```{r ev station data, echo = F}
+```{r ev station data, message=FALSE, warning = F, echo = F}
 
 ev_data_raw <- GET("https://developer.nrel.gov/api/alt-fuel-stations/v1.csv?api_key=cL01al61HtSmjbeVd83mIteBv5EXivGyen42Dj59&fuel_type=ELEC")
 ev_data <- content(ev_data_raw)
 ```
 
-```{r test w oregon, echo = F}
+```{r test w oregon, echo = F, message=FALSE, warning = F}
 ev_ore <- ev_data %>% 
   filter(State == "OR") %>% 
   select("Station Name", "Latitude", "Longitude")
 ```
 
-```{r converting ev station data to sf, echo = F}
+```{r converting ev station data to sf, echo = F, message=FALSE, warning = F}
 
 # the coords are the corresponding column names. crs is from the census dataset.
 
@@ -38,13 +36,13 @@ ev_ore_sf <- as.data.frame(ev_ore) %>% st_as_sf(coords = c("Longitude","Latitude
 
 ```
 
-```{r, echo = F}
+```{r, echo = F, message=FALSE, warning = F}
 # coords_ore <- do.call(rbind, st_geometry(ev_ore_sf)) %>% 
  # as_tibble() %>% setNames(c("long","lat"))
 ```
 
 
-```{r gathering census data, echo = F}
+```{r gathering census data, echo = F, message=FALSE, warning = F}
 rural_prop <- get_decennial(geography = "county",
                        variables = c("P001001", "P002005"),
                        state = "OR",
@@ -56,12 +54,13 @@ rural_prop <- get_decennial(geography = "county",
          county = reorder(county, prop_rural))
 ```
 
-```{r combining, echo = F}
+```{r combining, echo = F, message=FALSE, warning = F}
 combined <- st_join(rural_prop, left = TRUE, ev_ore_sf) %>% 
   group_by(county) 
 
 ```
-```{r, echo = F}
+
+```{r, echo = F, message=FALSE, warning = F}
 combined %>% 
   ggplot(aes(fill = prop_rural)) +
   geom_sf() +
@@ -69,46 +68,46 @@ combined %>%
   labs(title = "EV charging stations in Oregon", subtitle = "Counties by Percentage of Rural Residents", fill = "Percentage Rural", caption = "US Census Data and National Renewable Energy Laboratory database"
   )
 ```
-```{r saving graph}
-ggsave(filename = "milestone-6/ore_pct_rural.png")
+```{r saving graph, echo = F, message=FALSE, warning = F}
+# ggsave(filename = "milestone-6/ore_pct_rural.png")
 ```
 
 
 
 
-```{r nationwide ev data, echo = F}
-ev_nation <- ev_data %>% 
-  select("Station Name", "Latitude", "Longitude")
+```{r nationwide ev data, echo = F, message=FALSE, warning = F}
+# ev_nation <- ev_data %>% 
+  # select("Station Name", "Latitude", "Longitude")
 ```
 
-```{r converting nation data to sf, echo = F}
-ev_nation_sf <- as.data.frame(ev_nation) %>% st_as_sf(coords = c("Longitude","Latitude"), crs = 4269, remove = FALSE)
-
-```
-
-```{r nation census data}
-nation_rural_prop <- get_decennial(geography = "state",
-                       variables = c("P001001", "P002005"),
-                       year = 2010,
-                       output = "wide",
-                       geometry = TRUE) %>%
-  rename(state = NAME) %>%
-  mutate(prop_rural = P002005/P001001,
-         state = reorder(state, prop_rural))
-```
-
-```{r combining nation, echo = F}
-combined_nation <- st_join(nation_rural_prop, left = TRUE, ev_nation_sf) %>% 
-  group_by(state) 
+```{r converting nation data to sf, echo = F, message=FALSE, warning = F}
+# ev_nation_sf <- as.data.frame(ev_nation) %>% st_as_sf(coords = c("Longitude","Latitude"), crs = 4269, remove = FALSE)
 
 ```
 
-```{r graph nation, echo = F}
-combined_nation %>% 
-  ggplot(aes(fill = prop_rural)) +
-  geom_sf() +
-  geom_point(aes(Longitude, Latitude), size = 1, color = "green") +
-  labs(title = "EV charging stations", subtitle = "States by Percentage of Rural Residents", fill = "Percentage Rural", caption = "Source: US Census Data and National Renewable Energy Laboratory database"
-  )
+```{r nation census data, echo = F, message=FALSE, warning = F}
+# nation_rural_prop <- get_decennial(geography = "state",
+#                        variables = c("P001001", "P002005"),
+#                        year = 2010,
+#                        output = "wide",
+#                        geometry = TRUE) %>%
+#   rename(state = NAME) %>%
+#   mutate(prop_rural = P002005/P001001,
+#          state = reorder(state, prop_rural))
+```
+
+```{r combining nation, echo = F, message=FALSE, warning = F}
+# # combined_nation <- st_join(nation_rural_prop, left = TRUE, ev_nation_sf) %>% 
+#   group_by(state) 
+
+```
+
+```{r graph nation, echo = F, message=FALSE, warning = F}
+# combined_nation %>% 
+#   ggplot(aes(fill = prop_rural)) +
+#   geom_sf() +
+#   geom_point(aes(Longitude, Latitude), size = 1, color = "green") +
+#   labs(title = "EV charging stations", subtitle = "States by Percentage of Rural Residents", fill = "Percentage Rural", caption = "Source: US Census Data and National Renewable Energy Laboratory database"
+#   )
 ```
 
